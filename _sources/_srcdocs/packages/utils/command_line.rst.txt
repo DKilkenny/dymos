@@ -1,0 +1,16 @@
+.. index:: command_line.py
+
+.. _dymos.utils.command_line.py:
+
+command_line.py
+---------------
+
+.. automodule:: dymos.utils.command_line
+   :members:
+   :undoc-members:
+   :special-members: __init__, __contains__, __iter__, __setitem__, __getitem__
+   :show-inheritance:
+   :inherited-members:
+
+.. toctree::
+   :maxdepth: 1

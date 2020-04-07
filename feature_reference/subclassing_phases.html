@@ -1,0 +1,171 @@
+
+
+<!doctype html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Subclassing phases to reduce code duplication &#8212; dymos 0.15.0 documentation</title>
+    <link rel="stylesheet" href="../_static/bizstyle.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script src="../_static/bizstyle.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Grid Refinement" href="grid_refinement/grid_refinement.html" />
+    <link rel="prev" title="Retrieving Results: Timeseries Outputs" href="timeseries.html" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <!--[if lt IE 9]>
+    <script src="_static/css3-mediaqueries.js"></script>
+    <![endif]-->
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="grid_refinement/grid_refinement.html" title="Grid Refinement"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="timeseries.html" title="Retrieving Results: Timeseries Outputs"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">dymos 0.15.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="feature_reference.html" accesskey="U">Dymos Feature Reference</a> &#187;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="timeseries.html"
+                        title="previous chapter">Retrieving Results: Timeseries Outputs</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="grid_refinement/grid_refinement.html"
+                        title="next chapter">Grid Refinement</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/feature_reference/subclassing_phases.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="subclassing-phases-to-reduce-code-duplication">
+<h1>Subclassing phases to reduce code duplication<a class="headerlink" href="#subclassing-phases-to-reduce-code-duplication" title="Permalink to this headline">¶</a></h1>
+<p>In many of the Dymos examples, you might notice that in each phase we metadata for time, states,
+controls, and parameters which determines targets for various variables in the ODE, the variable
+path which serves as the rate for states being integrated, and default units to be used for these
+variables.  In a trajectory with many phases, this can lead to a lot of unnecessary code duplication.
+Afterall, an ODE system will generally be associated with a given set of state variables, and the
+rate sources, targets, and default units of those state variables <em>shouldn’t</em> need to be specified
+each time you decide to use it.  This is a pretty significant violation of the
+&lt;DRY <a class="reference external" href="https://en.wikipedia.org/wiki/Don%27t_repeat_yourself">https://en.wikipedia.org/wiki/Don%27t_repeat_yourself</a>&gt;_ principle.</p>
+<p>The developers didn’t want to require that non-standard OpenMDAO systems be used in ODEs.
+Thanks to recent updates to the OpenMDAO setup stack, you can now subclass
+Phase to associate that subclass with a particular ODE class.  The <cite>initialize`</cite> method for that Phase-derived
+class can include declarations for <cite>add_state</cite>, <cite>set_time_options</cite>, <cite>add_control</cite>, etc., that set
+default behavior for states, times, controls, and parameters when that phase is used.  Just remember
+to invoke <cite>super(DerivedPhase, self).initialize()</cite> at the beginning of your subclass’ <cite>initialize</cite> method.</p>
+<p>If you want to override any options for time, states, controls, or parameters you can use the
+<cite>set_time_options</cite>, <cite>set_state_options</cite>, <cite>set_control_options</cite>, <cite>set_polynomial_control_options</cite>,
+<cite>set_input_parameter_options</cite>, or <cite>set_design_parameter_options</cite> to change any of the settings
+whose defaults were set in the phase definition.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Dymos Trajectory objects need to know about the optimal control variables in Phases
+(time, states, controls, parameters).  Therefore all of these variables must be added
+to a phase <strong>prior</strong> to setup!</p>
+</div>
+<p>Consider the two-phase cannonball example.  Here we use the same ODE in two phases.  To reduce the
+amount of code needed when setting up the problem, we can create <cite>Cannonball</cite> phase, which always
+uses the CannonballODE.  Since the default units, targets, and rate_source of the state variables
+are unchanged in each phase in which we use it, we can define CannonballPhase as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">CannonballPhase</span><span class="p">(</span><span class="n">dm</span><span class="o">.</span><span class="n">Phase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    CannonballPhase serves as a demonstration of how to subclass Phase in order to associate</span>
+<span class="sd">    certain metadata of a set of states with a given ODE.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="c1"># First perform the standard phase initialization.</span>
+        <span class="c1"># After this step no more options may be declared, but the options</span>
+        <span class="c1"># will be available for assignment.</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CannonballPhase</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
+
+        <span class="c1"># Here we set the ODE class to be used.</span>
+        <span class="c1"># Note if this phase is instantiated with an ode_class argument it will be overridden here!</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;ode_class&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">CannonballODE</span>
+
+        <span class="c1"># Here we only set default units, rate_sources, and targets.</span>
+        <span class="c1"># Other options are generally more problem-specific.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_state</span><span class="p">(</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;m&#39;</span><span class="p">,</span> <span class="n">rate_source</span><span class="o">=</span><span class="s1">&#39;eom.r_dot&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_state</span><span class="p">(</span><span class="s1">&#39;h&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;m&#39;</span><span class="p">,</span> <span class="n">rate_source</span><span class="o">=</span><span class="s1">&#39;eom.h_dot&#39;</span><span class="p">,</span> <span class="n">targets</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;atmos.h&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_state</span><span class="p">(</span><span class="s1">&#39;gam&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;rad&#39;</span><span class="p">,</span> <span class="n">rate_source</span><span class="o">=</span><span class="s1">&#39;eom.gam_dot&#39;</span><span class="p">,</span> <span class="n">targets</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;eom.gam&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_state</span><span class="p">(</span><span class="s1">&#39;v&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;m/s&#39;</span><span class="p">,</span> <span class="n">rate_source</span><span class="o">=</span><span class="s1">&#39;eom.v_dot&#39;</span><span class="p">,</span>
+                       <span class="n">targets</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;dynamic_pressure.v&#39;</span><span class="p">,</span> <span class="s1">&#39;eom.v&#39;</span><span class="p">,</span> <span class="s1">&#39;kinetic_energy.v&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>While the setup method could also have been used here, there will be some unit issues in the phase
+linkages.  Definining this state metadata in <cite>initialize</cite>, before setup is called, ensures that Dymos
+has all of the necessary unit information when setting up the trajectory.</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="grid_refinement/grid_refinement.html" title="Grid Refinement"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="timeseries.html" title="Retrieving Results: Timeseries Outputs"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">dymos 0.15.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="feature_reference.html" >Dymos Feature Reference</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, National Aeronautics and Space Administration.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.0.
+    </div>
+  </body>
+</html>

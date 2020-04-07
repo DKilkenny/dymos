@@ -1,0 +1,906 @@
+
+
+<!doctype html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Van Der Pol Oscillator: A simple optimal control example &#8212; dymos 0.15.0 documentation</title>
+    <link rel="stylesheet" href="../_static/bizstyle.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script src="../_static/bizstyle.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Commercial Aircraft Range Maximization by Differential Inclusion" href="commercial_aircraft.html" />
+    <link rel="prev" title="Brachistochrone: A simple optimal control example" href="brachistochrone.html" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <!--[if lt IE 9]>
+    <script src="_static/css3-mediaqueries.js"></script>
+    <![endif]-->
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="commercial_aircraft.html" title="Commercial Aircraft Range Maximization by Differential Inclusion"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="brachistochrone.html" title="Brachistochrone: A simple optimal control example"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">dymos 0.15.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="examples.html" accesskey="U">Dymos by Example</a> &#187;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Van Der Pol Oscillator: A simple optimal control example</a><ul>
+<li><a class="reference internal" href="#the-ode-system-vanderpol-py">1. The ODE System: vanderpol.py</a></li>
+<li><a class="reference internal" href="#optimizing-the-system-control-vanderpol-dymos-py">2. Optimizing the system control: vanderpol_dymos.py</a></li>
+<li><a class="reference internal" href="#example-test-runs">3. Example test runs</a><ul>
+<li><a class="reference internal" href="#simulation">Simulation</a></li>
+<li><a class="reference internal" href="#optimize">Optimize</a></li>
+<li><a class="reference internal" href="#optimize-with-grid-refinement">Optimize with grid refinement</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#references">4. References</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="brachistochrone.html"
+                        title="previous chapter">Brachistochrone: A simple optimal control example</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="commercial_aircraft.html"
+                        title="next chapter">Commercial Aircraft Range Maximization by Differential Inclusion</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/examples/vanderpol.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="van-der-pol-oscillator-a-simple-optimal-control-example">
+<h1>Van Der Pol Oscillator: A simple optimal control example<a class="headerlink" href="#van-der-pol-oscillator-a-simple-optimal-control-example" title="Permalink to this headline">¶</a></h1>
+<p>In dynamics, the Van Der Pol oscillator[1] is a non-conservative oscillator with non-linear damping.
+It evolves in time according to the second-order differential equation:</p>
+<div class="math notranslate nohighlight">
+\[\frac{d^2x}{d t^2} - u(1 - x^2)\frac{d x}{d t} + x = 0\]</div>
+<p>where <span class="math notranslate nohighlight">\(x\)</span> is the position coordinate—which is a function of the time <span class="math notranslate nohighlight">\(t\)</span>, and <span class="math notranslate nohighlight">\(u\)</span>
+is a scalar parameter indicating the nonlinearity and the strength of the damping.</p>
+<p>In this Dymos Van Der Pol Oscillator optimal control example, we minimize the objective function, <span class="math notranslate nohighlight">\(J\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[J = \int x_0^2 + x_1^2 + u^2\]</div>
+<p>by varying the dynamic control, <span class="math notranslate nohighlight">\(u\)</span>, subject to the dynamics:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\frac{d x_0}{d t} &amp;= (1 - x_1^2) x_0 - x_1 + u \\
+\frac{d x_1}{d t} &amp;= x_0 \\
+-0.75 &amp;\le u \le 1.0\end{split}\]</div>
+<p>The initial conditions are</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}x_0 &amp;= 1 \\
+x_1 &amp;= 1 \\
+u &amp;=-0.75, \\\end{split}\]</div>
+<p>and the final conditions are</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}x_0 &amp;= 0 \\
+x_1 &amp;= 0 \\
+u &amp;= 0\end{split}\]</div>
+<p>In other words, we want to find the optimal trajectory of the control <span class="math notranslate nohighlight">\(u\)</span> such that the
+oscillation, its rate of change, and the control are all driven to zero.</p>
+<div class="section" id="the-ode-system-vanderpol-py">
+<h2>1. The ODE System: vanderpol.py<a class="headerlink" href="#the-ode-system-vanderpol-py" title="Permalink to this headline">¶</a></h2>
+<p>The ODE system is a standard OpenMDAO <cite>ExplicitComponent</cite> object. It has three inputs: the
+two state variables <span class="math notranslate nohighlight">\(x_0\)</span> and <span class="math notranslate nohighlight">\(x_1\)</span>, plus the control <span class="math notranslate nohighlight">\(u\)</span>.</p>
+<p>The derivatives of the state variables are outputs. The include the two expected outputs
+<span class="math notranslate nohighlight">\(\frac{d x_0}{d t}\)</span> and <span class="math notranslate nohighlight">\(\frac{d x_1}{d t}\)</span>, but also the derivative of the objective
+function <span class="math notranslate nohighlight">\(\frac{d J}{d t}\)</span> is also present. The objective function is treated as a state
+variable so that Dymos will do the integration.</p>
+<p>Note that some of the partial derivatives are declared with provided constant values. When
+this is the case, the variables can be skipped in the <cite>compute_partials</cite> method.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">openmdao.api</span> <span class="k">as</span> <span class="nn">om</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">openmdao.utils.array_utils</span> <span class="kn">import</span> <span class="n">evenly_distrib_idxs</span>
+
+
+<span class="k">class</span> <span class="nc">vanderpol_ode</span><span class="p">(</span><span class="n">om</span><span class="o">.</span><span class="n">ExplicitComponent</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;ODE for optimal control of a Van der Pol oscillator</span>
+
+<span class="sd">    objective J:</span>
+<span class="sd">        minimize integral of (x0**2 + x1**2 + u**2) for 0.0 &lt;= t &lt;= 15</span>
+
+<span class="sd">    subject to:</span>
+<span class="sd">        x0dot = (1 - x1^2) * x0 - x1 + u</span>
+<span class="sd">        x1dot = x0</span>
+<span class="sd">        -0.75 &lt;= u &lt;= 1.0</span>
+
+<span class="sd">    initial conditions:</span>
+<span class="sd">        x0(0) = 1.0   x1(0) = 1.0</span>
+
+<span class="sd">    final conditions:</span>
+<span class="sd">        x0(15) = 0.0  x1(15) = 0.0</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">declare</span><span class="p">(</span><span class="s1">&#39;num_nodes&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">nn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;num_nodes&#39;</span><span class="p">]</span>
+
+        <span class="c1"># inputs: 2 states and a control</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_input</span><span class="p">(</span><span class="s1">&#39;x0&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nn</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;derivative of Output&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;V/s&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_input</span><span class="p">(</span><span class="s1">&#39;x1&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nn</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;Output&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;V&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_input</span><span class="p">(</span><span class="s1">&#39;u&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nn</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;control&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+        <span class="c1"># outputs: derivative of states</span>
+        <span class="c1"># the objective function will be treated as a state for computation, so its derivative is an output</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_output</span><span class="p">(</span><span class="s1">&#39;x0dot&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nn</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;second derivative of Output&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;V/s**2&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_output</span><span class="p">(</span><span class="s1">&#39;x1dot&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nn</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;derivative of Output&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;V/s&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_output</span><span class="p">(</span><span class="s1">&#39;Jdot&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nn</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;derivative of objective&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;1.0/s&#39;</span><span class="p">)</span>
+
+        <span class="c1"># partials</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nn</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;x0dot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;x0&#39;</span><span class="p">,</span>  <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;x0dot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;x1&#39;</span><span class="p">,</span>  <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;x0dot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;u&#39;</span><span class="p">,</span>   <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;x1dot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;x0&#39;</span><span class="p">,</span>  <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;x1dot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;x1&#39;</span><span class="p">,</span>  <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;x1dot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;u&#39;</span><span class="p">,</span>   <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;Jdot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;x0&#39;</span><span class="p">,</span>  <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;Jdot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;x1&#39;</span><span class="p">,</span>  <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;Jdot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;u&#39;</span><span class="p">,</span>   <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">):</span>
+        <span class="n">x0</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;x0&#39;</span><span class="p">]</span>
+        <span class="n">x1</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;x1&#39;</span><span class="p">]</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;u&#39;</span><span class="p">]</span>
+
+        <span class="n">outputs</span><span class="p">[</span><span class="s1">&#39;x0dot&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">x1</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">x0</span> <span class="o">-</span> <span class="n">x1</span> <span class="o">+</span> <span class="n">u</span>
+        <span class="n">outputs</span><span class="p">[</span><span class="s1">&#39;x1dot&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">x0</span>
+        <span class="n">outputs</span><span class="p">[</span><span class="s1">&#39;Jdot&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">x0</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">x1</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">u</span><span class="o">**</span><span class="mi">2</span>
+
+    <span class="k">def</span> <span class="nf">compute_partials</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">jacobian</span><span class="p">):</span>
+        <span class="c1"># partials declared with &#39;val&#39; above do not need to be computed</span>
+        <span class="n">x0</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;x0&#39;</span><span class="p">]</span>
+        <span class="n">x1</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;x1&#39;</span><span class="p">]</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;u&#39;</span><span class="p">]</span>
+
+        <span class="n">jacobian</span><span class="p">[</span><span class="s1">&#39;x0dot&#39;</span><span class="p">,</span> <span class="s1">&#39;x0&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">x1</span> <span class="o">*</span> <span class="n">x1</span>
+        <span class="n">jacobian</span><span class="p">[</span><span class="s1">&#39;x0dot&#39;</span><span class="p">,</span> <span class="s1">&#39;x1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">x1</span> <span class="o">*</span> <span class="n">x0</span> <span class="o">-</span> <span class="mf">1.0</span>
+
+        <span class="n">jacobian</span><span class="p">[</span><span class="s1">&#39;Jdot&#39;</span><span class="p">,</span> <span class="s1">&#39;x0&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">x0</span>
+        <span class="n">jacobian</span><span class="p">[</span><span class="s1">&#39;Jdot&#39;</span><span class="p">,</span> <span class="s1">&#39;x1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">x1</span>
+        <span class="n">jacobian</span><span class="p">[</span><span class="s1">&#39;Jdot&#39;</span><span class="p">,</span> <span class="s1">&#39;u&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">u</span>
+
+
+<span class="k">class</span> <span class="nc">vanderpol_ode_group</span><span class="p">(</span><span class="n">om</span><span class="o">.</span><span class="n">Group</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Group containing distributed vanderpol_ode pass through and calculation&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">declare</span><span class="p">(</span><span class="s1">&#39;num_nodes&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">nn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;num_nodes&#39;</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_subsystem</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;vanderpol_ode_passthrough&#39;</span><span class="p">,</span>
+                           <span class="n">subsys</span><span class="o">=</span><span class="n">vanderpol_ode_passthrough</span><span class="p">(</span><span class="n">num_nodes</span><span class="o">=</span><span class="n">nn</span><span class="p">),</span>
+                           <span class="n">promotes_inputs</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x0&#39;</span><span class="p">,</span> <span class="s1">&#39;x1&#39;</span><span class="p">,</span> <span class="s1">&#39;u&#39;</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_subsystem</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;vanderpol_ode_delay&#39;</span><span class="p">,</span>
+                           <span class="n">subsys</span><span class="o">=</span><span class="n">vanderpol_ode_delay</span><span class="p">(</span><span class="n">num_nodes</span><span class="o">=</span><span class="n">nn</span><span class="p">),</span>
+                           <span class="n">promotes_outputs</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;x0dot&#39;</span><span class="p">,</span> <span class="s1">&#39;x1dot&#39;</span><span class="p">,</span> <span class="s1">&#39;Jdot&#39;</span><span class="p">])</span>
+
+        <span class="c1"># connect collect_comp (pass through) output to distributed ODE input</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s1">&#39;vanderpol_ode_passthrough.x0pass&#39;</span><span class="p">,</span> <span class="s1">&#39;vanderpol_ode_delay.x0&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s1">&#39;vanderpol_ode_passthrough.x1pass&#39;</span><span class="p">,</span> <span class="s1">&#39;vanderpol_ode_delay.x1&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s1">&#39;vanderpol_ode_passthrough.upass&#39;</span><span class="p">,</span> <span class="s1">&#39;vanderpol_ode_delay.u&#39;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">vanderpol_ode_passthrough</span><span class="p">(</span><span class="n">om</span><span class="o">.</span><span class="n">ExplicitComponent</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Pass through component that just copies control and state from input to output</span>
+
+<span class="sd">    if you just use a plain old passthrough (non-distributed with a full sized input and output) component to connect</span>
+<span class="sd">    to the distributed output, the framework will do the MPI allgathering for you&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">declare</span><span class="p">(</span><span class="s1">&#39;num_nodes&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">nn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;num_nodes&#39;</span><span class="p">]</span>  <span class="c1"># total number of inputs and outputs over all processes</span>
+
+        <span class="c1"># inputs: 2 states and a control</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_input</span><span class="p">(</span><span class="s1">&#39;x0&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nn</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;derivative of Output&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;V/s&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_input</span><span class="p">(</span><span class="s1">&#39;x1&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nn</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;Output&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;V&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_input</span><span class="p">(</span><span class="s1">&#39;u&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nn</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;control&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+        <span class="c1"># outputs: same as inputs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_output</span><span class="p">(</span><span class="s1">&#39;x0pass&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nn</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;derivative of Output&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;V/s&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_output</span><span class="p">(</span><span class="s1">&#39;x1pass&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nn</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;Output&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;V&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_output</span><span class="p">(</span><span class="s1">&#39;upass&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">nn</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;control&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+        <span class="c1"># partials</span>
+        <span class="n">row_col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nn</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;x0pass&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;x0&#39;</span><span class="p">,</span> <span class="n">rows</span><span class="o">=</span><span class="n">row_col</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">row_col</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;x1pass&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;x1&#39;</span><span class="p">,</span> <span class="n">rows</span><span class="o">=</span><span class="n">row_col</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">row_col</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;upass&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;u&#39;</span><span class="p">,</span> <span class="n">rows</span><span class="o">=</span><span class="n">row_col</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">row_col</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">):</span>
+        <span class="n">outputs</span><span class="p">[</span><span class="s1">&#39;x0pass&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;x0&#39;</span><span class="p">]</span>
+        <span class="n">outputs</span><span class="p">[</span><span class="s1">&#39;x1pass&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;x1&#39;</span><span class="p">]</span>
+        <span class="n">outputs</span><span class="p">[</span><span class="s1">&#39;upass&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;u&#39;</span><span class="p">]</span>
+
+
+<span class="k">class</span> <span class="nc">vanderpol_ode_delay</span><span class="p">(</span><span class="n">om</span><span class="o">.</span><span class="n">ExplicitComponent</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;intentionally slow version of vanderpol_ode for effects of demonstrating distributed component calculations</span>
+
+<span class="sd">    MPI can run this component in multiple processes, distributing the calculation of derivatives.</span>
+<span class="sd">    This code has a delay in it to simulate a longer computation. It should run faster with more processes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">delay_time</span> <span class="o">=</span> <span class="mf">0.01</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progress_prints</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">declare</span><span class="p">(</span><span class="s1">&#39;num_nodes&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;distributed&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">declare</span><span class="p">(</span><span class="s1">&#39;size&#39;</span><span class="p">,</span> <span class="n">types</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Size of input and output vectors.&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">nn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;num_nodes&#39;</span><span class="p">]</span>
+        <span class="n">comm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span>
+        <span class="n">rank</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">rank</span>
+
+        <span class="n">sizes</span><span class="p">,</span> <span class="n">offsets</span> <span class="o">=</span> <span class="n">evenly_distrib_idxs</span><span class="p">(</span><span class="n">comm</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">nn</span><span class="p">)</span>  <span class="c1"># (#cpus, #inputs) -&gt; (size array, offset array)</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">offsets</span><span class="p">[</span><span class="n">rank</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">io_size</span> <span class="o">=</span> <span class="n">sizes</span><span class="p">[</span><span class="n">rank</span><span class="p">]</span>  <span class="c1"># number of inputs and outputs managed by this distributed process</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">io_size</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">progress_prints</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;in vanderpol_ode_delay.setup&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">io_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">rank</span><span class="p">)</span>
+
+        <span class="c1"># inputs: 2 states and a control</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_input</span><span class="p">(</span><span class="s1">&#39;x0&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">io_size</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;derivative of Output&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;V/s&#39;</span><span class="p">,</span>
+                       <span class="n">src_indices</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_input</span><span class="p">(</span><span class="s1">&#39;x1&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">io_size</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;Output&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;V&#39;</span><span class="p">,</span>
+                       <span class="n">src_indices</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_input</span><span class="p">(</span><span class="s1">&#39;u&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">io_size</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;control&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                       <span class="n">src_indices</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">))</span>
+
+        <span class="c1"># outputs: derivative of states</span>
+        <span class="c1"># the objective function will be treated as a state for computation, so its derivative is an output</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_output</span><span class="p">(</span><span class="s1">&#39;x0dot&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">io_size</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;second derivative of Output&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;V/s**2&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_output</span><span class="p">(</span><span class="s1">&#39;x1dot&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">io_size</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;derivative of Output&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;V/s&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_output</span><span class="p">(</span><span class="s1">&#39;Jdot&#39;</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">io_size</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s1">&#39;derivative of objective&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;1.0/s&#39;</span><span class="p">)</span>
+
+        <span class="c1"># partials</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">io_size</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;x0dot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;x0&#39;</span><span class="p">,</span>  <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;x0dot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;x1&#39;</span><span class="p">,</span>  <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;x0dot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;u&#39;</span><span class="p">,</span>   <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;x1dot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;x0&#39;</span><span class="p">,</span>  <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;x1dot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;x1&#39;</span><span class="p">,</span>  <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;x1dot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;u&#39;</span><span class="p">,</span>   <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">,</span> <span class="n">val</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;Jdot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;x0&#39;</span><span class="p">,</span>  <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;Jdot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;x1&#39;</span><span class="p">,</span>  <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">declare_partials</span><span class="p">(</span><span class="n">of</span><span class="o">=</span><span class="s1">&#39;Jdot&#39;</span><span class="p">,</span> <span class="n">wrt</span><span class="o">=</span><span class="s1">&#39;u&#39;</span><span class="p">,</span>   <span class="n">rows</span><span class="o">=</span><span class="n">r</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="n">c</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">outputs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">progress_prints</span><span class="p">:</span>
+            <span class="n">sizes</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;x0&#39;</span><span class="p">]),</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;x1&#39;</span><span class="p">]),</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;u&#39;</span><span class="p">]))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;in vanderpol_ode_delay.compute&#39;</span><span class="p">,</span> <span class="n">sizes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">comm</span><span class="o">.</span><span class="n">rank</span><span class="p">)</span>
+
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">delay_time</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">io_size</span><span class="p">)</span>  <span class="c1"># introduce slowness proportional to size of computation</span>
+
+        <span class="n">x0</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;x0&#39;</span><span class="p">]</span>
+        <span class="n">x1</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;x1&#39;</span><span class="p">]</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;u&#39;</span><span class="p">]</span>
+
+        <span class="n">outputs</span><span class="p">[</span><span class="s1">&#39;x0dot&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">x1</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">x0</span> <span class="o">-</span> <span class="n">x1</span> <span class="o">+</span> <span class="n">u</span>
+        <span class="n">outputs</span><span class="p">[</span><span class="s1">&#39;x1dot&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">x0</span>
+        <span class="n">outputs</span><span class="p">[</span><span class="s1">&#39;Jdot&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">x0</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">x1</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">u</span><span class="o">**</span><span class="mi">2</span>
+
+    <span class="k">def</span> <span class="nf">compute_partials</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">jacobian</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">progress_prints</span><span class="p">:</span>
+            <span class="n">sizes</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;x0&#39;</span><span class="p">]),</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;x1&#39;</span><span class="p">]),</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;u&#39;</span><span class="p">]))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;in vanderpol_ode_delay.compute_partials&#39;</span><span class="p">,</span> <span class="n">sizes</span><span class="p">)</span>
+
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">delay_time</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">io_size</span><span class="p">)</span>  <span class="c1"># introduce slowness proportional to size of computation</span>
+
+        <span class="c1"># partials declared with &#39;val&#39; above do not need to be computed</span>
+        <span class="n">x0</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;x0&#39;</span><span class="p">]</span>
+        <span class="n">x1</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;x1&#39;</span><span class="p">]</span>
+        <span class="n">u</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;u&#39;</span><span class="p">]</span>
+
+        <span class="n">jacobian</span><span class="p">[</span><span class="s1">&#39;x0dot&#39;</span><span class="p">,</span> <span class="s1">&#39;x0&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">x1</span> <span class="o">*</span> <span class="n">x1</span>
+        <span class="n">jacobian</span><span class="p">[</span><span class="s1">&#39;x0dot&#39;</span><span class="p">,</span> <span class="s1">&#39;x1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">x1</span> <span class="o">*</span> <span class="n">x0</span> <span class="o">-</span> <span class="mf">1.0</span>
+
+        <span class="n">jacobian</span><span class="p">[</span><span class="s1">&#39;Jdot&#39;</span><span class="p">,</span> <span class="s1">&#39;x0&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">x0</span>
+        <span class="n">jacobian</span><span class="p">[</span><span class="s1">&#39;Jdot&#39;</span><span class="p">,</span> <span class="s1">&#39;x1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">x1</span>
+        <span class="n">jacobian</span><span class="p">[</span><span class="s1">&#39;Jdot&#39;</span><span class="p">,</span> <span class="s1">&#39;u&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">u</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="optimizing-the-system-control-vanderpol-dymos-py">
+<h2>2. Optimizing the system control: vanderpol_dymos.py<a class="headerlink" href="#optimizing-the-system-control-vanderpol-dymos-py" title="Permalink to this headline">¶</a></h2>
+<p>The following code creates and returns the Van Der Pol <cite>Problem</cite> using Dymos.
+Th returned <cite>Problem</cite> object is ready for simulation or solution.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">openmdao.api</span> <span class="k">as</span> <span class="nn">om</span>
+<span class="kn">import</span> <span class="nn">dymos</span> <span class="k">as</span> <span class="nn">dm</span>
+<span class="kn">from</span> <span class="nn">dymos.examples.vanderpol.vanderpol_ode</span> <span class="kn">import</span> <span class="n">vanderpol_ode</span><span class="p">,</span> <span class="n">vanderpol_ode_group</span>
+
+
+<span class="k">def</span> <span class="nf">vanderpol</span><span class="p">(</span><span class="n">transcription</span><span class="o">=</span><span class="s1">&#39;gauss-lobatto&#39;</span><span class="p">,</span> <span class="n">num_segments</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">transcription_order</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+              <span class="n">compressed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;SLSQP&#39;</span><span class="p">,</span> <span class="n">use_pyoptsparse</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">delay</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Dymos problem definition for optimal control of a Van der Pol oscillator&quot;&quot;&quot;</span>
+
+    <span class="c1"># define the OpenMDAO problem</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">om</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">om</span><span class="o">.</span><span class="n">Group</span><span class="p">())</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">use_pyoptsparse</span><span class="p">:</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">driver</span> <span class="o">=</span> <span class="n">om</span><span class="o">.</span><span class="n">ScipyOptimizeDriver</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">driver</span> <span class="o">=</span> <span class="n">om</span><span class="o">.</span><span class="n">pyOptSparseDriver</span><span class="p">()</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;optimizer&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">optimizer</span>
+    <span class="k">if</span> <span class="n">use_pyoptsparse</span> <span class="ow">and</span> <span class="n">optimizer</span> <span class="o">==</span> <span class="s1">&#39;SNOPT&#39;</span><span class="p">:</span>
+        <span class="n">p</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">opt_settings</span><span class="p">[</span><span class="s1">&#39;iSumm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">6</span>  <span class="c1"># show detailed SNOPT output</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">declare_coloring</span><span class="p">()</span>
+
+    <span class="c1"># define a Trajectory object and add to model</span>
+    <span class="n">traj</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">Trajectory</span><span class="p">()</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">add_subsystem</span><span class="p">(</span><span class="s1">&#39;traj&#39;</span><span class="p">,</span> <span class="n">subsys</span><span class="o">=</span><span class="n">traj</span><span class="p">)</span>
+
+    <span class="c1"># define a Transcription</span>
+    <span class="k">if</span> <span class="n">transcription</span> <span class="o">==</span> <span class="s1">&#39;gauss-lobatto&#39;</span><span class="p">:</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">GaussLobatto</span><span class="p">(</span><span class="n">num_segments</span><span class="o">=</span><span class="n">num_segments</span><span class="p">,</span>
+                            <span class="n">order</span><span class="o">=</span><span class="n">transcription_order</span><span class="p">,</span>
+                            <span class="n">compressed</span><span class="o">=</span><span class="n">compressed</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">transcription</span> <span class="o">==</span> <span class="s1">&#39;radau-ps&#39;</span><span class="p">:</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">Radau</span><span class="p">(</span><span class="n">num_segments</span><span class="o">=</span><span class="n">num_segments</span><span class="p">,</span>
+                     <span class="n">order</span><span class="o">=</span><span class="n">transcription_order</span><span class="p">,</span>
+                     <span class="n">compressed</span><span class="o">=</span><span class="n">compressed</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">transcription</span> <span class="o">==</span> <span class="s1">&#39;runge-kutta&#39;</span><span class="p">:</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">RungeKutta</span><span class="p">(</span><span class="n">num_segments</span><span class="o">=</span><span class="n">num_segments</span><span class="p">,</span>
+                          <span class="n">order</span><span class="o">=</span><span class="n">transcription_order</span><span class="p">,</span>
+                          <span class="n">compressed</span><span class="o">=</span><span class="n">compressed</span><span class="p">)</span>
+
+    <span class="c1"># define a Phase as specified above and add to Phase</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">delay</span><span class="p">:</span>
+        <span class="n">phase</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">Phase</span><span class="p">(</span><span class="n">ode_class</span><span class="o">=</span><span class="n">vanderpol_ode</span><span class="p">,</span> <span class="n">transcription</span><span class="o">=</span><span class="n">t</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">phase</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">Phase</span><span class="p">(</span><span class="n">ode_class</span><span class="o">=</span><span class="n">vanderpol_ode_group</span><span class="p">,</span> <span class="n">transcription</span><span class="o">=</span><span class="n">t</span><span class="p">)</span>  <span class="c1"># distributed component group</span>
+    <span class="n">traj</span><span class="o">.</span><span class="n">add_phase</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;phase0&#39;</span><span class="p">,</span> <span class="n">phase</span><span class="o">=</span><span class="n">phase</span><span class="p">)</span>
+
+    <span class="n">t_final</span> <span class="o">=</span> <span class="mf">15.0</span>
+    <span class="n">phase</span><span class="o">.</span><span class="n">set_time_options</span><span class="p">(</span><span class="n">fix_initial</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fix_duration</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">duration_val</span><span class="o">=</span><span class="n">t_final</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="s1">&#39;s&#39;</span><span class="p">)</span>
+
+    <span class="c1"># set the State time options</span>
+    <span class="n">phase</span><span class="o">.</span><span class="n">add_state</span><span class="p">(</span><span class="s1">&#39;x0&#39;</span><span class="p">,</span> <span class="n">fix_initial</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">fix_final</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">rate_source</span><span class="o">=</span><span class="s1">&#39;x0dot&#39;</span><span class="p">,</span>
+                    <span class="n">units</span><span class="o">=</span><span class="s1">&#39;V/s&#39;</span><span class="p">,</span>
+                    <span class="n">targets</span><span class="o">=</span><span class="s1">&#39;x0&#39;</span><span class="p">)</span>  <span class="c1"># target required because x0 is an input</span>
+    <span class="n">phase</span><span class="o">.</span><span class="n">add_state</span><span class="p">(</span><span class="s1">&#39;x1&#39;</span><span class="p">,</span> <span class="n">fix_initial</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">fix_final</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">rate_source</span><span class="o">=</span><span class="s1">&#39;x1dot&#39;</span><span class="p">,</span>
+                    <span class="n">units</span><span class="o">=</span><span class="s1">&#39;V&#39;</span><span class="p">,</span>
+                    <span class="n">targets</span><span class="o">=</span><span class="s1">&#39;x1&#39;</span><span class="p">)</span>  <span class="c1"># target required because x1 is an input</span>
+    <span class="n">phase</span><span class="o">.</span><span class="n">add_state</span><span class="p">(</span><span class="s1">&#39;J&#39;</span><span class="p">,</span> <span class="n">fix_initial</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">fix_final</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">rate_source</span><span class="o">=</span><span class="s1">&#39;Jdot&#39;</span><span class="p">,</span>
+                    <span class="n">units</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+    <span class="c1"># define the control</span>
+    <span class="n">phase</span><span class="o">.</span><span class="n">add_control</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;u&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lower</span><span class="o">=-</span><span class="mf">0.75</span><span class="p">,</span> <span class="n">upper</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">continuity</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                      <span class="n">rate_continuity</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">targets</span><span class="o">=</span><span class="s1">&#39;u&#39;</span><span class="p">)</span>  <span class="c1"># target required because u is an input</span>
+
+    <span class="c1"># add constraints</span>
+    <span class="n">phase</span><span class="o">.</span><span class="n">add_boundary_constraint</span><span class="p">(</span><span class="s1">&#39;x0&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;initial&#39;</span><span class="p">,</span> <span class="n">equals</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">phase</span><span class="o">.</span><span class="n">add_boundary_constraint</span><span class="p">(</span><span class="s1">&#39;x1&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;initial&#39;</span><span class="p">,</span> <span class="n">equals</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">phase</span><span class="o">.</span><span class="n">add_boundary_constraint</span><span class="p">(</span><span class="s1">&#39;J&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;initial&#39;</span><span class="p">,</span> <span class="n">equals</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+
+    <span class="n">phase</span><span class="o">.</span><span class="n">add_boundary_constraint</span><span class="p">(</span><span class="s1">&#39;x0&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;final&#39;</span><span class="p">,</span> <span class="n">equals</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+    <span class="n">phase</span><span class="o">.</span><span class="n">add_boundary_constraint</span><span class="p">(</span><span class="s1">&#39;x1&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;final&#39;</span><span class="p">,</span> <span class="n">equals</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+
+    <span class="c1"># define objective to minimize</span>
+    <span class="n">phase</span><span class="o">.</span><span class="n">add_objective</span><span class="p">(</span><span class="s1">&#39;J&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;final&#39;</span><span class="p">)</span>
+
+    <span class="c1"># setup the problem</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">setup</span><span class="p">(</span><span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># TODO - Dymos API will soon provide a way to specify this.</span>
+    <span class="c1"># the linear solver used to compute derivatives is not working on MPI, so switch to LinearRunOnce</span>
+    <span class="k">for</span> <span class="n">phase</span> <span class="ow">in</span> <span class="n">traj</span><span class="o">.</span><span class="n">_phases</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+        <span class="n">phase</span><span class="o">.</span><span class="n">linear_solver</span> <span class="o">=</span> <span class="n">om</span><span class="o">.</span><span class="n">LinearRunOnce</span><span class="p">()</span>
+
+    <span class="n">p</span><span class="p">[</span><span class="s1">&#39;traj.phase0.t_initial&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">p</span><span class="p">[</span><span class="s1">&#39;traj.phase0.t_duration&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">t_final</span>
+
+    <span class="c1"># add a linearly interpolated initial guess for the state and control curves</span>
+    <span class="n">p</span><span class="p">[</span><span class="s1">&#39;traj.phase0.states:x0&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">phase</span><span class="o">.</span><span class="n">interpolate</span><span class="p">(</span><span class="n">ys</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">nodes</span><span class="o">=</span><span class="s1">&#39;state_input&#39;</span><span class="p">)</span>
+    <span class="n">p</span><span class="p">[</span><span class="s1">&#39;traj.phase0.states:x1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">phase</span><span class="o">.</span><span class="n">interpolate</span><span class="p">(</span><span class="n">ys</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">nodes</span><span class="o">=</span><span class="s1">&#39;state_input&#39;</span><span class="p">)</span>
+    <span class="n">p</span><span class="p">[</span><span class="s1">&#39;traj.phase0.states:J&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">phase</span><span class="o">.</span><span class="n">interpolate</span><span class="p">(</span><span class="n">ys</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">nodes</span><span class="o">=</span><span class="s1">&#39;state_input&#39;</span><span class="p">)</span>
+    <span class="n">p</span><span class="p">[</span><span class="s1">&#39;traj.phase0.controls:u&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">phase</span><span class="o">.</span><span class="n">interpolate</span><span class="p">(</span><span class="n">ys</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">0.75</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.75</span><span class="p">],</span> <span class="n">nodes</span><span class="o">=</span><span class="s1">&#39;control_input&#39;</span><span class="p">)</span>
+
+    <span class="n">p</span><span class="o">.</span><span class="n">final_setup</span><span class="p">()</span>
+
+    <span class="c1"># debugging helpers:</span>
+    <span class="c1"># om.n2(p)       # show n2 diagram</span>
+    <span class="c1">#</span>
+    <span class="c1"># with np.printoptions(linewidth=1024):  # display partials for manual checking</span>
+    <span class="c1">#     p.check_partials(compact_print=True)</span>
+
+    <span class="k">return</span> <span class="n">p</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="c1"># just set up the problem, test it elsewhere</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">vanderpol</span><span class="p">(</span><span class="n">transcription</span><span class="o">=</span><span class="s1">&#39;gauss-lobatto&#39;</span><span class="p">,</span> <span class="n">num_segments</span><span class="o">=</span><span class="mi">75</span><span class="p">,</span> <span class="n">transcription_order</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                  <span class="n">compressed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;SLSQP&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The <cite>vanderpol</cite> function that sets up this Dymos problem has several optional arguments
+that can set non-default values for the transcription type, number of segments, optimizer, etc.
+The OpenMDAO <cite>ScipyOptimizeDriver</cite> is used by default because it has compact output suitable
+for this example. When developing a new solution, more detailed output can be helpful and can
+be enabled by using OpenMDAO <cite>pyOptSparseDriver</cite> instead.</p>
+<p>Some other noteworthy issues are:</p>
+<ul class="simple">
+<li><p>the <cite>add_state</cite> and <cite>add_control</cite> calls include the <cite>target</cite> parameter for <span class="math notranslate nohighlight">\(x_0\)</span>,
+<span class="math notranslate nohighlight">\(x_1\)</span>, and <span class="math notranslate nohighlight">\(u\)</span>. This is required so that the inputs are correctly calculated.</p></li>
+<li><p>Near the bottom there is a section that provides a linearly interpolated initial guess
+for the state and control curves. Some initial values for these guesses are required.</p></li>
+</ul>
+</div>
+<div class="section" id="example-test-runs">
+<h2>3. Example test runs<a class="headerlink" href="#example-test-runs" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="simulation">
+<h3>Simulation<a class="headerlink" href="#simulation" title="Permalink to this headline">¶</a></h3>
+<p>The first example test run shows the creation and simulation of the Dymos Van Der Pol <cite>Problem</cite>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dymos.examples.plotting</span> <span class="kn">import</span> <span class="n">plot_results</span>
+<span class="kn">from</span> <span class="nn">dymos.examples.vanderpol.vanderpol_dymos</span> <span class="kn">import</span> <span class="n">vanderpol</span>
+
+<span class="c1"># Create the Dymos problem instance</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">vanderpol</span><span class="p">(</span><span class="n">transcription</span><span class="o">=</span><span class="s1">&#39;gauss-lobatto&#39;</span><span class="p">,</span> <span class="n">num_segments</span><span class="o">=</span><span class="mi">75</span><span class="p">)</span>
+
+<span class="c1"># Run the problem (simulate only)</span>
+<span class="n">p</span><span class="o">.</span><span class="n">run_model</span><span class="p">()</span>
+
+<span class="c1"># check validity by using scipy.integrate.solve_ivp to integrate the solution</span>
+<span class="n">exp_out</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">traj</span><span class="o">.</span><span class="n">simulate</span><span class="p">()</span>
+
+<span class="c1"># Display the results</span>
+<span class="n">plot_results</span><span class="p">([(</span><span class="s1">&#39;traj.phase0.timeseries.time&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;traj.phase0.timeseries.states:x1&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;time (s)&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;x1 (V)&#39;</span><span class="p">),</span>
+             <span class="p">(</span><span class="s1">&#39;traj.phase0.timeseries.time&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;traj.phase0.timeseries.states:x0&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;time (s)&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;x0 (V/s)&#39;</span><span class="p">),</span>
+              <span class="p">(</span><span class="s1">&#39;traj.phase0.timeseries.states:x0&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;traj.phase0.timeseries.states:x1&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;x0 vs x1&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;x0 vs x1&#39;</span><span class="p">),</span>
+             <span class="p">(</span><span class="s1">&#39;traj.phase0.timeseries.time&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;traj.phase0.timeseries.controls:u&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;time (s)&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;control u&#39;</span><span class="p">),</span>
+              <span class="p">],</span>
+             <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Van Der Pol Simulation&#39;</span><span class="p">,</span>
+             <span class="n">p_sol</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">p_sim</span><span class="o">=</span><span class="n">exp_out</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="cell border-box-sizing code_cell rendered"><div class="output_area"><pre>INFO: checking out_of_order
+INFO: checking system
+INFO: checking solvers
+INFO: checking dup_inputs
+INFO: checking missing_recorders
+WARNING: The Problem has no recorder of any kind attached
+INFO: checking comp_has_no_outputs
+INFO: checking out_of_order
+INFO: checking system
+INFO: checking solvers
+INFO: checking dup_inputs
+INFO: checking missing_recorders
+WARNING: The Problem has no recorder of any kind attached
+INFO: checking comp_has_no_outputs
+
+Simulating trajectory traj
+INFO: checking out_of_order
+INFO: checking system
+INFO: checking solvers
+INFO: checking dup_inputs
+INFO: checking missing_recorders
+WARNING: The Problem has no recorder of any kind attached
+INFO: checking comp_has_no_outputs
+Done simulating trajectory traj
+</pre></div></div><div class="figure align-default">
+<img alt="../_images/doc_plot_14.png" src="../_images/doc_plot_14.png" />
+</div>
+<p>Since the problem was only simulated and not solved, the <em>solution</em> lines in the plots show only the
+initial guesses for <span class="math notranslate nohighlight">\(x_0\)</span>, <span class="math notranslate nohighlight">\(x_1\)</span>, and <span class="math notranslate nohighlight">\(u\)</span>. The <em>simulation</em> lines shown in the plots
+are the system response with the control variable <span class="math notranslate nohighlight">\(u\)</span> held constant.</p>
+<p>The first two plots  shows the variables <span class="math notranslate nohighlight">\(x_0\)</span> and <span class="math notranslate nohighlight">\(x_1\)</span>, vs time.
+The third plots shows <span class="math notranslate nohighlight">\(x_0\)</span> vs <span class="math notranslate nohighlight">\(x_1\)</span> (which will be mostly circular in
+the case of undamped oscillation).
+The final plot is the (fixed) control variable <span class="math notranslate nohighlight">\(u\)</span> vs time.</p>
+</div>
+<div class="section" id="optimize">
+<h3>Optimize<a class="headerlink" href="#optimize" title="Permalink to this headline">¶</a></h3>
+<p>The next example shows optimization in addition to simulation.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">dymos</span> <span class="k">as</span> <span class="nn">dm</span>
+<span class="kn">from</span> <span class="nn">dymos.examples.plotting</span> <span class="kn">import</span> <span class="n">plot_results</span>
+<span class="kn">from</span> <span class="nn">dymos.examples.vanderpol.vanderpol_dymos</span> <span class="kn">import</span> <span class="n">vanderpol</span>
+
+<span class="c1"># Create the Dymos problem instance</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">vanderpol</span><span class="p">(</span><span class="n">transcription</span><span class="o">=</span><span class="s1">&#39;gauss-lobatto&#39;</span><span class="p">,</span> <span class="n">num_segments</span><span class="o">=</span><span class="mi">75</span><span class="p">,</span>
+              <span class="n">transcription_order</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">compressed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;SLSQP&#39;</span><span class="p">)</span>
+
+<span class="c1"># Find optimal control solution to stop oscillation</span>
+<span class="n">dm</span><span class="o">.</span><span class="n">run_problem</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+<span class="c1"># check validity by using scipy.integrate.solve_ivp to integrate the solution</span>
+<span class="n">exp_out</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">traj</span><span class="o">.</span><span class="n">simulate</span><span class="p">()</span>
+
+<span class="c1"># Display the results</span>
+<span class="n">plot_results</span><span class="p">([(</span><span class="s1">&#39;traj.phase0.timeseries.time&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;traj.phase0.timeseries.states:x1&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;time (s)&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;x1 (V)&#39;</span><span class="p">),</span>
+             <span class="p">(</span><span class="s1">&#39;traj.phase0.timeseries.time&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;traj.phase0.timeseries.states:x0&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;time (s)&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;x0 (V/s)&#39;</span><span class="p">),</span>
+              <span class="p">(</span><span class="s1">&#39;traj.phase0.timeseries.states:x0&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;traj.phase0.timeseries.states:x1&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;x0 vs x1&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;x0 vs x1&#39;</span><span class="p">),</span>
+             <span class="p">(</span><span class="s1">&#39;traj.phase0.timeseries.time&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;traj.phase0.timeseries.controls:u&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;time (s)&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;control u&#39;</span><span class="p">),</span>
+              <span class="p">],</span>
+             <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Van Der Pol Optimization&#39;</span><span class="p">,</span>
+             <span class="n">p_sol</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">p_sim</span><span class="o">=</span><span class="n">exp_out</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="cell border-box-sizing code_cell rendered"><div class="output_area"><pre>INFO: checking out_of_order
+INFO: checking system
+INFO: checking solvers
+INFO: checking dup_inputs
+INFO: checking missing_recorders
+WARNING: The Problem has no recorder of any kind attached
+INFO: checking comp_has_no_outputs
+INFO: checking out_of_order
+INFO: checking system
+INFO: checking solvers
+INFO: checking dup_inputs
+INFO: checking missing_recorders
+WARNING: The Problem has no recorder of any kind attached
+INFO: checking comp_has_no_outputs
+INFO: checking out_of_order
+INFO: checking system
+INFO: checking solvers
+INFO: checking dup_inputs
+INFO: checking missing_recorders
+WARNING: The Problem has no recorder of any kind attached
+INFO: checking comp_has_no_outputs
+Full total jacobian was computed 3 times, taking 1.336671 seconds.
+Total jacobian shape: (300, 379) 
+
+
+Jacobian shape: (300, 379)  ( 1.84% nonzero)
+FWD solves: 9   REV solves: 0
+Total colors vs. total size: 9 vs 379  (97.6% improvement)
+
+Sparsity computed using tolerance: 1e-25
+Time to compute sparsity: 1.336671 sec.
+Time to compute coloring: 0.009489 sec.
+Optimization terminated successfully.    (Exit mode 0)
+            Current function value: 5.280840345415473
+            Iterations: 67
+            Function evaluations: 76
+            Gradient evaluations: 67
+Optimization Complete
+-----------------------------------
+
+Simulating trajectory traj
+INFO: checking out_of_order
+INFO: checking system
+INFO: checking solvers
+INFO: checking dup_inputs
+INFO: checking missing_recorders
+WARNING: The Problem has no recorder of any kind attached
+INFO: checking comp_has_no_outputs
+Done simulating trajectory traj
+</pre></div></div><div class="figure align-default">
+<img alt="../_images/doc_plot_15.png" src="../_images/doc_plot_15.png" />
+</div>
+<p>With a successful optimization, the resulting plots show a good match between the simulated and optimized
+results. The state variables <span class="math notranslate nohighlight">\(x_0\)</span> and <span class="math notranslate nohighlight">\(x_1\)</span> as well as the control variable <span class="math notranslate nohighlight">\(u\)</span> are
+all driven to zero.</p>
+</div>
+<div class="section" id="optimize-with-grid-refinement">
+<h3>Optimize with grid refinement<a class="headerlink" href="#optimize-with-grid-refinement" title="Permalink to this headline">¶</a></h3>
+<p>Repeating the optimization with grid refinement enabled requires changing only two lines in the
+code. For the sake of grid refinement demonstration, the initial number of segments is also reduced
+by a factor of 5.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">dymos</span> <span class="k">as</span> <span class="nn">dm</span>
+<span class="kn">from</span> <span class="nn">dymos.examples.plotting</span> <span class="kn">import</span> <span class="n">plot_results</span>
+<span class="kn">from</span> <span class="nn">dymos.examples.vanderpol.vanderpol_dymos</span> <span class="kn">import</span> <span class="n">vanderpol</span>
+
+<span class="c1"># Create the Dymos problem instance</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">vanderpol</span><span class="p">(</span><span class="n">transcription</span><span class="o">=</span><span class="s1">&#39;gauss-lobatto&#39;</span><span class="p">,</span> <span class="n">num_segments</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span>
+              <span class="n">transcription_order</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">compressed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;SLSQP&#39;</span><span class="p">)</span>
+
+<span class="c1"># Enable grid refinement and find optimal control solution to stop oscillation</span>
+<span class="n">p</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">traj</span><span class="o">.</span><span class="n">phases</span><span class="o">.</span><span class="n">phase0</span><span class="o">.</span><span class="n">set_refine_options</span><span class="p">(</span><span class="n">refine</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">dm</span><span class="o">.</span><span class="n">run_problem</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">refine</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">refine_iteration_limit</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+<span class="c1"># check validity by using scipy.integrate.solve_ivp to integrate the solution</span>
+<span class="n">exp_out</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">traj</span><span class="o">.</span><span class="n">simulate</span><span class="p">()</span>
+
+<span class="c1"># Display the results</span>
+<span class="n">plot_results</span><span class="p">([(</span><span class="s1">&#39;traj.phase0.timeseries.time&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;traj.phase0.timeseries.states:x1&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;time (s)&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;x1 (V)&#39;</span><span class="p">),</span>
+             <span class="p">(</span><span class="s1">&#39;traj.phase0.timeseries.time&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;traj.phase0.timeseries.states:x0&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;time (s)&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;x0 (V/s)&#39;</span><span class="p">),</span>
+              <span class="p">(</span><span class="s1">&#39;traj.phase0.timeseries.states:x0&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;traj.phase0.timeseries.states:x1&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;x0 vs x1&#39;</span><span class="p">,</span>
+               <span class="s1">&#39;x0 vs x1&#39;</span><span class="p">),</span>
+             <span class="p">(</span><span class="s1">&#39;traj.phase0.timeseries.time&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;traj.phase0.timeseries.controls:u&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;time (s)&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;control u&#39;</span><span class="p">),</span>
+              <span class="p">],</span>
+             <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Van Der Pol Optimization with Grid Refinement&#39;</span><span class="p">,</span>
+             <span class="n">p_sol</span><span class="o">=</span><span class="n">p</span><span class="p">,</span> <span class="n">p_sim</span><span class="o">=</span><span class="n">exp_out</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="cell border-box-sizing code_cell rendered"><div class="output_area"><pre>INFO: checking out_of_order
+INFO: checking system
+INFO: checking solvers
+INFO: checking dup_inputs
+INFO: checking missing_recorders
+WARNING: The Problem has no recorder of any kind attached
+INFO: checking comp_has_no_outputs
+INFO: checking out_of_order
+INFO: checking system
+INFO: checking solvers
+INFO: checking dup_inputs
+INFO: checking missing_recorders
+WARNING: The Problem has no recorder of any kind attached
+INFO: checking comp_has_no_outputs
+INFO: checking out_of_order
+INFO: checking system
+INFO: checking solvers
+INFO: checking dup_inputs
+INFO: checking missing_recorders
+WARNING: The Problem has no recorder of any kind attached
+INFO: checking comp_has_no_outputs
+Full total jacobian was computed 3 times, taking 0.206891 seconds.
+Total jacobian shape: (60, 79) 
+
+
+Jacobian shape: (60, 79)  ( 8.78% nonzero)
+FWD solves: 9   REV solves: 0
+Total colors vs. total size: 9 vs 79  (88.6% improvement)
+
+Sparsity computed using tolerance: 1e-25
+Time to compute sparsity: 0.206891 sec.
+Time to compute coloring: 0.002027 sec.
+Optimization terminated successfully.    (Exit mode 0)
+            Current function value: 5.72485209852227
+            Iterations: 39
+            Function evaluations: 45
+            Gradient evaluations: 39
+Optimization Complete
+-----------------------------------
+
+
+==================================================
+          Grid Refinement - Iteration 0           
+--------------------------------------------------
+    Phase: traj.phases.phase0
+        Refinement Options:
+            Allow Refinement = True
+            Tolerance = 0.0001
+            Min Order = 3
+            Max Order = 14
+        Original Grid:
+            Number of Segments = 15
+            Segment Ends = [-1.0, -0.8667, -0.7333, -0.6, -0.4667, -0.3333, -0.2, -0.0667, 0.0667, 0.2, 0.3333, 0.4667, 0.6, 0.7333, 0.8667, 1.0]
+            Segment Order = [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
+            Error = [ 0.04163,  0.01436, 0.006208,  0.01148, 0.006548, 0.001465, 0.0009108, 0.000377, 7.561e-05, 6.715e-05, 1.758e-05, 4.546e-06, 4.666e-06, 6.197e-07, 1.264e-06]
+        New Grid:
+            Number of Segments = 15
+            Segment Ends = [-1.0, -0.8667, -0.7333, -0.6, -0.4667, -0.3333, -0.2, -0.0667, 0.0667, 0.2, 0.3333, 0.4667, 0.6, 0.7333, 0.8667, 1.0]
+            Segment Order = [9, 9, 7, 9, 7, 7, 7, 5, 3, 3, 3, 3, 3, 3, 3]
+        Refined: True
+
+Full total jacobian was computed 3 times, taking 0.126493 seconds.
+Total jacobian shape: (114, 169) 
+
+
+Jacobian shape: (114, 169)  (16.57% nonzero)
+FWD solves: 15   REV solves: 26
+Total colors vs. total size: 41 vs 114  (64.0% improvement)
+
+Sparsity computed using tolerance: 1e-25
+Time to compute sparsity: 0.126493 sec.
+Time to compute coloring: 0.038625 sec.
+Optimization terminated successfully.    (Exit mode 0)
+            Current function value: 5.277991879006971
+            Iterations: 15
+            Function evaluations: 16
+            Gradient evaluations: 15
+Optimization Complete
+-----------------------------------
+
+
+==================================================
+          Grid Refinement - Iteration 1           
+--------------------------------------------------
+    Phase: traj.phases.phase0
+        Refinement Options:
+            Allow Refinement = True
+            Tolerance = 0.0001
+            Min Order = 3
+            Max Order = 14
+        Original Grid:
+            Number of Segments = 15
+            Segment Ends = [-1.0, -0.8667, -0.7333, -0.6, -0.4667, -0.3333, -0.2, -0.0667, 0.0667, 0.2, 0.3333, 0.4667, 0.6, 0.7333, 0.8667, 1.0]
+            Segment Order = [9, 9, 7, 9, 7, 7, 7, 5, 3, 3, 3, 3, 3, 3, 3]
+            Error = [7.051e-05, 3.603e-05, 0.0001597, 3.243e-05, 1.987e-06, 1.555e-06, 5.52e-07, 4.632e-06, 2.903e-05, 1.763e-05, 2.867e-06, 2.263e-06, 1.444e-06, 2.326e-07, 9.731e-08]
+        New Grid:
+            Number of Segments = 15
+            Segment Ends = [-1.0, -0.8667, -0.7333, -0.6, -0.4667, -0.3333, -0.2, -0.0667, 0.0667, 0.2, 0.3333, 0.4667, 0.6, 0.7333, 0.8667, 1.0]
+            Segment Order = [9, 9, 9, 9, 7, 7, 7, 5, 3, 3, 3, 3, 3, 3, 3]
+        Refined: True
+
+Full total jacobian was computed 3 times, taking 0.138204 seconds.
+Total jacobian shape: (117, 174) 
+
+
+Jacobian shape: (117, 174)  (16.35% nonzero)
+FWD solves: 15   REV solves: 30
+Total colors vs. total size: 45 vs 117  (61.5% improvement)
+
+Sparsity computed using tolerance: 1e-25
+Time to compute sparsity: 0.138204 sec.
+Time to compute coloring: 0.040553 sec.
+Optimization terminated successfully.    (Exit mode 0)
+            Current function value: 5.278023482782076
+            Iterations: 5
+            Function evaluations: 5
+            Gradient evaluations: 5
+Optimization Complete
+-----------------------------------
+
+
+==================================================
+          Grid Refinement - Iteration 2           
+--------------------------------------------------
+    Phase: traj.phases.phase0
+        Refinement Options:
+            Allow Refinement = True
+            Tolerance = 0.0001
+            Min Order = 3
+            Max Order = 14
+        Original Grid:
+            Number of Segments = 15
+            Segment Ends = [-1.0, -0.8667, -0.7333, -0.6, -0.4667, -0.3333, -0.2, -0.0667, 0.0667, 0.2, 0.3333, 0.4667, 0.6, 0.7333, 0.8667, 1.0]
+            Segment Order = [9, 9, 9, 9, 7, 7, 7, 5, 3, 3, 3, 3, 3, 3, 3]
+            Error = [7.012e-05, 3.509e-05, 1.576e-05, 2.678e-05, 1.896e-06, 4.336e-07, 1.134e-06, 5.225e-06, 2.903e-05, 1.772e-05, 2.919e-06, 2.264e-06, 1.436e-06, 1.999e-07, 9.155e-08]
+        New Grid:
+            Number of Segments = 15
+            Segment Ends = [-1.0, -0.8667, -0.7333, -0.6, -0.4667, -0.3333, -0.2, -0.0667, 0.0667, 0.2, 0.3333, 0.4667, 0.6, 0.7333, 0.8667, 1.0]
+            Segment Order = [9, 9, 9, 9, 7, 7, 7, 5, 3, 3, 3, 3, 3, 3, 3]
+        Refined: False
+
+Successfully completed grid refinement.
+==================================================
+
+Simulating trajectory traj
+INFO: checking out_of_order
+INFO: checking system
+INFO: checking solvers
+INFO: checking dup_inputs
+INFO: checking missing_recorders
+WARNING: The Problem has no recorder of any kind attached
+INFO: checking comp_has_no_outputs
+Done simulating trajectory traj
+</pre></div></div><div class="figure align-default">
+<img alt="../_images/doc_plot_16.png" src="../_images/doc_plot_16.png" />
+</div>
+<p>Optimization with grid refinement gets results similar to the example without grid refinement, but
+runs faster and does not require supplying a good guess for the number of required segments.</p>
+</div>
+</div>
+<div class="section" id="references">
+<h2>4. References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h2>
+<p>[1] Van Der Pol oscillator description from <a class="reference external" href="https://en.wikipedia.org/wiki/Van_der_Pol_oscillator">Wikipedia</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="commercial_aircraft.html" title="Commercial Aircraft Range Maximization by Differential Inclusion"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="brachistochrone.html" title="Brachistochrone: A simple optimal control example"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">dymos 0.15.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="examples.html" >Dymos by Example</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, National Aeronautics and Space Administration.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.0.
+    </div>
+  </body>
+</html>
