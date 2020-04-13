@@ -100,7 +100,7 @@ install:
     pwd;
     if [ "$PYOPT_INSTALL_SCRIPT" ]; then
       echo "Copy install script";
-      scp -r $PYOPT_INSTALL_SCRIPT .;
+      scp -r "$PYOPT_INSTALL_SCRIPT";
       ./build_pyoptsparse_ipopt.sh;
       ls -ltr;
       pwd;
