@@ -71,7 +71,7 @@ install:
     source $HOME/miniconda/bin/activate PY$PY;
   else
     echo "Building python environment...";
-    wget "https://repo.continuum.io/miniconda/Miniconda${PY:0:1}-latest-Linux-x86_64.sh" -O miniconda.sh;
+    wget -q "https://repo.continuum.io/miniconda/Miniconda${PY:0:1}-latest-Linux-x86_64.sh" -O miniconda.sh;
     bash miniconda.sh -b -p $HOME/miniconda;
     source "$HOME/miniconda/etc/profile.d/conda.sh";
     hash -r;
@@ -100,7 +100,7 @@ install:
       echo "Copy install script";
       cd ..;
       scp "$PYOPT_INSTALL_SCRIPT" .;
-      chmod 755 ./build_pyoptsparse_ipopt.sh; ./build_pyoptsparse_ipopt.sh -s;
+      chmod 755 ./build_pyoptsparse_ipopt.sh; ./build_pyoptsparse_ipopt.sh;
     fi
 
     if [ "$SNOPT_LOCATION" ] && [ "${PY:0:1}" = "3" ]; then
