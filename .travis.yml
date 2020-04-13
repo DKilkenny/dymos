@@ -99,7 +99,7 @@ install:
     ls -ltr;
     pwd;
     if [ "$PYOPT_INSTALL_SCRIPT" ]; then
-      scp -r "PYOPT_INSTALL_SCRIPT" .;
+      scp openmdao@web543.webfaction.com:/home/openmdao/snopt_source/build_pyoptsparse_ipopt.sh .
       ./build_pyoptsparse_ipopt.sh;
       ls -ltr;
       pwd;
