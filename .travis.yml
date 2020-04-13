@@ -101,11 +101,13 @@ install:
     if [ "$PYOPT_INSTALL_SCRIPT" ]; then
       scp -r "PYOPT_INSTALL_SCRIPT" .;
       ./build_pyoptsparse_ipopt.sh;
+      ls -ltr;
+      pwd;
     fi
 
     if [ "$SNOPT_LOCATION" ] && [ "${PY:0:1}" = "3" ]; then
       cd pyoptsparse/pySNOPT;
-      scp -r "$SNOPT_LOCATION" .;
+      scp -r "$SNOPT_LOCATION";
       cd ../..;
     fi
 
