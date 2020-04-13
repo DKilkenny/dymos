@@ -100,8 +100,9 @@ install:
     pwd;
     if [ "$PYOPT_INSTALL_SCRIPT" ]; then
       echo "Copy install script";
+      cd ..;
       scp "$PYOPT_INSTALL_SCRIPT" .;
-      ./build_pyoptsparse_ipopt.sh;
+      chmod 755 ./build_pyoptsparse_ipopt.sh; ./build_pyoptsparse_ipopt.sh;
       ls -ltr;
       pwd;
     fi
@@ -110,6 +111,7 @@ install:
       cd pyoptsparse/pySNOPT;
       scp -r "$SNOPT_LOCATION";
       cd ../..;
+      cd dymos;
     fi
 
     python setup.py build install;
