@@ -61,7 +61,7 @@ install:
     ssh-add /tmp/travis_deploy_rsa;
     echo -e "Host web543.webfaction.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config;
   else
-    echo "KEY NOT FOUND"
+    echo "KEY NOT FOUND";
   fi
 
 # if we have a cached miniconda environment then just activate the cached one, otherwise, build one
