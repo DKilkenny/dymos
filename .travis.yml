@@ -54,12 +54,14 @@ before_install:
 
 install:
 # get key decrypted, placed, chmodded, and added for passwordless access to WebFaction
-- if [ "$encrypted_4548f0b84c7d_key" ]; then
-    openssl aes-256-cbc -K $encrypted_4548f0b84c7d_key -iv $encrypted_4548f0b84c7d_iv -in travis_deploy_rsa.enc -out /tmp/travis_deploy_rsa -d;
+- if [ "$encrypted_da0e548c2e00_key" ]; then
+    openssl aes-256-cbc -K $encrypted_da0e548c2e00_key -iv $encrypted_da0e548c2e00_iv -in travis_deploy_rsa.enc -out /tmp/travis_deploy_rsa -d;
     eval "$(ssh-agent -s)";
     chmod 600 /tmp/travis_deploy_rsa;
     ssh-add /tmp/travis_deploy_rsa;
     echo -e "Host web543.webfaction.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config;
+  else
+    echo "KEY NOT FOUND"
   fi
 
 # if we have a cached miniconda environment then just activate the cached one, otherwise, build one
@@ -100,7 +102,8 @@ install:
       scp -r "PYOPT_INSTALL_SCRIPT" .;
       ./build_pyoptsparse_ipopt.sh;
     fi
-
+    ls -ltr;
+    pwd;
 
     if [ "$SNOPT_LOCATION" ] && [ "${PY:0:1}" = "3" ]; then
       cd pyoptsparse/pySNOPT;
