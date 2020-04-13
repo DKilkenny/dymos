@@ -96,14 +96,12 @@ install:
     pip install --user travis-sphinx;
 
     echo "Install pyoptsparse and along with IPOPT";
-    echo ls -ltr;
-    echo pwd;
+    ls -ltr;
+    pwd;
     if [ "$PYOPT_INSTALL_SCRIPT" ]; then
       scp -r "PYOPT_INSTALL_SCRIPT" .;
       ./build_pyoptsparse_ipopt.sh;
     fi
-    echo ls -ltr;
-    echo pwd;
 
     if [ "$SNOPT_LOCATION" ] && [ "${PY:0:1}" = "3" ]; then
       cd pyoptsparse/pySNOPT;
