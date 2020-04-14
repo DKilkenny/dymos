@@ -107,8 +107,9 @@ install:
       echo "Install SNOPT";
       cd pyoptsparse/pyoptsparse/pySNOPT;
       scp -r "$SNOPT_LOCATION";
-      cd ../../..;
-      cd dymos;
+      cd pyoptsparse;
+      python setup.py build install;
+      cd ../../dymos;
     fi
 
     git clone https://github.com/OpenMDAO/MBI.git;
