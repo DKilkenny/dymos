@@ -50,8 +50,6 @@ class TestRunProblem(unittest.TestCase):
 
         phase0.add_objective('xL', loc='final')
 
-        phase0.set_refine_options(refine=True, tol=1e-6)
-
         p.setup(check=True)
 
         tf = np.float128(100)
@@ -62,7 +60,7 @@ class TestRunProblem(unittest.TestCase):
         p.set_val('traj.phase0.t_duration', tf)
         p.set_val('traj.phase0.controls:u', phase0.interpolate(ys=[-0.6, 2.4],
                                                                nodes='control_input'))
-        dm.run_problem(p, True, refine_method='hp', refine_iteration_limit=10)
+        dm.run_problem(p, refine_method='hp', refine_iteration_limit=10)
 
         sqrt_two = np.sqrt(2)
         val = sqrt_two * tf
@@ -115,8 +113,6 @@ class TestRunProblem(unittest.TestCase):
 
         phase0.add_objective('xL', loc='final')
 
-        phase0.set_refine_options(refine=True)
-
         p.setup(check=True)
 
         tf = 100
@@ -127,7 +123,7 @@ class TestRunProblem(unittest.TestCase):
         p.set_val('traj.phase0.t_duration', tf)
         p.set_val('traj.phase0.controls:u', phase0.interpolate(ys=[-0.6, 2.4],
                                                                nodes='control_input'))
-        dm.run_problem(p, refine=True, refine_method='hp')
+        dm.run_problem(p, refine_method='hp')
 
         sqrt_two = np.sqrt(2)
         val = sqrt_two * tf
@@ -179,8 +175,6 @@ class TestRunProblem(unittest.TestCase):
         # Minimize time at the end of the phase
         phase0.add_objective('time_phase', loc='final', scaler=10)
 
-        phase0.set_refine_options(refine=True)
-
         p.model.linear_solver = om.DirectSolver()
         p.setup(check=True)
 
@@ -193,7 +187,34 @@ class TestRunProblem(unittest.TestCase):
         p.set_val('traj.phase0.controls:theta', phase0.interpolate(ys=[5, 100], nodes='control_input'))
         p.set_val('traj.phase0.parameters:g', 9.80665)
 
-        dm.run_problem(p, True)
+        dm.run_problem(p)
+
+    def test_run_problem_args(self):
+        from dymos.examples.vanderpol.vanderpol_dymos import vanderpol
+        from dymos.examples.vanderpol.vanderpol_dymos_plots import vanderpol_dymos_plots
+        from dymos.run_problem import modify_problem, run_problem
+        from scipy.interpolate import interp1d
+        from numpy.testing import assert_almost_equal
+
+        # Create the Dymos problem instance
+        p = vanderpol(transcription='gauss-lobatto', num_segments=75)
+
+        # Run the problem (simulate only)
+        p.run_model()
+
+        # simulate and record
+        p.model.traj.simulate(record_file='vanderpol_simulation.sql')
+
+        # create a new problem for restart to simulate a different command line execution
+        q = vanderpol(transcription='gauss-lobatto', num_segments=75)
+
+        # Call modify_problem with simulation restart database
+        modify_problem(q, restart='vanderpol_simulation.sql')
+
+        # # Run the model
+        run_problem(q, no_iterate=True)
+
+        print('Here')
 
     def test_modify_problem(self):
         from dymos.examples.vanderpol.vanderpol_dymos import vanderpol
