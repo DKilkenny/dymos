@@ -189,33 +189,6 @@ class TestRunProblem(unittest.TestCase):
 
         dm.run_problem(p)
 
-    def test_run_problem_args(self):
-        from dymos.examples.vanderpol.vanderpol_dymos import vanderpol
-        from dymos.examples.vanderpol.vanderpol_dymos_plots import vanderpol_dymos_plots
-        from dymos.run_problem import modify_problem, run_problem
-        from scipy.interpolate import interp1d
-        from numpy.testing import assert_almost_equal
-
-        # Create the Dymos problem instance
-        p = vanderpol(transcription='gauss-lobatto', num_segments=75)
-
-        # Run the problem (simulate only)
-        p.run_model()
-
-        # simulate and record
-        p.model.traj.simulate(record_file='vanderpol_simulation.sql')
-
-        # create a new problem for restart to simulate a different command line execution
-        q = vanderpol(transcription='gauss-lobatto', num_segments=75)
-
-        # Call modify_problem with simulation restart database
-        modify_problem(q, restart='vanderpol_simulation.sql')
-
-        # # Run the model
-        run_problem(q, no_iterate=True)
-
-        print('Here')
-
     def test_modify_problem(self):
         from dymos.examples.vanderpol.vanderpol_dymos import vanderpol
         from dymos.examples.vanderpol.vanderpol_dymos_plots import vanderpol_dymos_plots
@@ -239,7 +212,7 @@ class TestRunProblem(unittest.TestCase):
         modify_problem(q, restart='vanderpol_simulation.sql')
 
         # # Run the model
-        run_problem(q, no_iterate=True)
+        run_problem(q, refine_iteration_limit=10)
 
         #  The solution should look like the explicit time history for the states and controls.
         DO_PLOTS = False
@@ -270,7 +243,7 @@ class TestRunProblem(unittest.TestCase):
 
             assert_almost_equal(x1q, fx1s(tq), decimal=2)
             assert_almost_equal(x0q, fx0s(tq), decimal=2)
-            assert_almost_equal(uq, fus(tq), decimal=5)
+            assert_almost_equal(uq, fus(tq), decimal=3)
 
 
 if __name__ == '__main__':  # pragma: no cover

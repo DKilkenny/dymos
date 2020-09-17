@@ -72,8 +72,8 @@ def modify_problem(problem, restart=None, reset_grid=False):
             load_case(problem, case)
 
 
-def run_problem(problem, refine=False, refine_method='hp', refine_iteration_limit=10, run_driver=True,
-                simulate=False, no_iterate=False):
+def run_problem(problem, refine_method='hp', refine_iteration_limit=10, run_driver=True,
+                simulate=False):
     """
     A Dymos-specific interface to execute an OpenMDAO problem containing Dymos Trajectories or
     Phases.  This function can iteratively call run_driver to perform grid refinement, and automatically
@@ -100,15 +100,13 @@ def run_problem(problem, refine=False, refine_method='hp', refine_iteration_limi
     refinement_methods = {'hp': HPAdaptive, 'ph': PHAdaptive}
 
     if run_driver:
-        if no_iterate:
-            problem.driver.opt_settings['maxiter'] = 0
         problem.run_driver()
     else:
         problem.run_model()
 
     problem.record('final')  # save case for potential restart
 
-    if refine_iteration_limit >= 0 and run_driver:
+    if refine_iteration_limit > 0 and run_driver:
         out_file = 'grid_refinement.out'
 
         phases = find_phases(problem.model)
