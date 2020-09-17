@@ -99,6 +99,8 @@ def run_problem(problem, refine_method='hp', refine_iteration_limit=10, run_driv
     problem.final_setup()  # make sure command line option hook has a chance to run
     refinement_methods = {'hp': HPAdaptive, 'ph': PHAdaptive}
 
+    # problem.model.traj.phases.phase0.state_options['x']['solve_segments']
+
     if run_driver:
         problem.run_driver()
     else:
@@ -106,46 +108,49 @@ def run_problem(problem, refine_method='hp', refine_iteration_limit=10, run_driv
 
     problem.record('final')  # save case for potential restart
 
-    if refine_iteration_limit >= 0 and run_driver:
-        out_file = 'grid_refinement.out'
+    phases = find_phases(problem.model)
 
-        phases = find_phases(problem.model)
+    for meta in phases.values():
+        for name in meta.state_options:
+            if refine_iteration_limit >= 0 and meta.state_options[name]['solve_segments']:
 
-        ref = refinement_methods[refine_method](phases)
-        with open(out_file, 'w+') as f:
+                out_file = 'grid_refinement.out'
 
-            for i in range(refine_iteration_limit):
-                refine_results = check_error(phases)
+                ref = refinement_methods[refine_method](phases)
+                with open(out_file, 'w+') as f:
 
-                refined_phases = [phase_path for phase_path in refine_results if
-                                  phases[phase_path].refine_options['refine'] and
-                                  np.any(refine_results[phase_path]['need_refinement'])]
+                    for i in range(refine_iteration_limit):
+                        refine_results = check_error(phases)
 
-                for stream in f, sys.stdout:
-                    write_error(stream, i, phases, refine_results)
+                        refined_phases = [phase_path for phase_path in refine_results if
+                                        phases[phase_path].refine_options['refine'] and
+                                        np.any(refine_results[phase_path]['need_refinement'])]
 
-                if not refined_phases:
-                    break
+                        for stream in f, sys.stdout:
+                            write_error(stream, i, phases, refine_results)
 
-                ref.refine(refine_results, i)
+                        if not refined_phases:
+                            break
 
-                for stream in f, sys.stdout:
-                    write_refine_iter(stream, i, phases, refine_results)
+                        ref.refine(refine_results, i)
 
-                prev_soln = {'inputs': problem.model.list_inputs(out_stream=None, units=True, prom_name=True),
-                             'outputs': problem.model.list_outputs(out_stream=None, units=True, prom_name=True)}
+                        for stream in f, sys.stdout:
+                            write_refine_iter(stream, i, phases, refine_results)
 
-                problem.setup()
+                        prev_soln = {'inputs': problem.model.list_inputs(out_stream=None, units=True, prom_name=True),
+                                    'outputs': problem.model.list_outputs(out_stream=None, units=True, prom_name=True)}
 
-                load_case(problem, prev_soln)
+                        problem.setup()
 
-                problem.run_driver()
-            for stream in [f, sys.stdout]:
-                if i == refine_iteration_limit-1:
-                    print('Iteration limit exceeded. Unable to satisfy specified tolerance', file=stream)
-                else:
-                    print('Successfully completed grid refinement.', file=stream)
-            print(50 * '=')
+                        load_case(problem, prev_soln)
+
+                        problem.run_driver()
+                    for stream in [f, sys.stdout]:
+                        if i == refine_iteration_limit-1:
+                            print('Iteration limit exceeded. Unable to satisfy specified tolerance', file=stream)
+                        else:
+                            print('Successfully completed grid refinement.', file=stream)
+                    print(50 * '=')
 
     if simulate:
         for subsys in problem.model.system_iter(include_self=True, recurse=True):
