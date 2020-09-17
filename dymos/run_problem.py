@@ -106,7 +106,7 @@ def run_problem(problem, refine_method='hp', refine_iteration_limit=10, run_driv
 
     problem.record('final')  # save case for potential restart
 
-    if refine_iteration_limit > 0 and run_driver:
+    if refine_iteration_limit >= 0 and run_driver:
         out_file = 'grid_refinement.out'
 
         phases = find_phases(problem.model)
