@@ -10,7 +10,7 @@ import os
 import sys
 
 
-def modify_problem(problem, restart=None, reset_grid=False):
+def modify_problem(problem, restart=None, reset_grid=False, solution_name='dymos_solution.db'):
     """
     Modifies the problem object by loading in a guess from a specified restart file.
     Parameters
@@ -24,7 +24,7 @@ def modify_problem(problem, restart=None, reset_grid=False):
     """
     # record variables to database when running driver under hook
     # pre-hook is important, because recording initialization is skipped if final_setup has run once
-    save_db = os.getcwd() + '/dymos_solution.db'
+    save_db = os.getcwd() + '/' + solution_name
 
     try:
         os.remove(save_db)
@@ -70,11 +70,11 @@ def modify_problem(problem, restart=None, reset_grid=False):
 
 
 def run_problem(problem, refine_method='hp', refine_iteration_limit=10, run_driver=True,
-                simulate=False):
+                simulate=False, case_name='dymos_simulation.db'):
     """
     A Dymos-specific interface to execute an OpenMDAO problem containing Dymos Trajectories or
-    Phases.  This function can iteratively call run_driver to perform grid refinement, and automatically
-    call simulate following a run to check the validity of a result.
+    Phases.  This function can iteratively call run_driver to perform grid refinement, and
+    automatically call simulate following a run to check the validity of a result.
     Parameters
     ----------
     problem : om.Problem
@@ -94,8 +94,6 @@ def run_problem(problem, refine_method='hp', refine_iteration_limit=10, run_driv
         has been run and grid refinement is complete.
     """
     problem.final_setup()  # make sure command line option hook has a chance to run
-
-    # problem.model.traj.phases.phase0.state_options['x']['solve_segments']
 
     if run_driver:
         problem.run_driver()
