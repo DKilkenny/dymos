@@ -81,7 +81,7 @@ def brachistochrone_min_time(transcription='gauss-lobatto', num_segments=8, tran
     p['traj0.phase0.controls:theta'] = phase.interpolate(ys=[5, 100], nodes='control_input')
     p['traj0.phase0.parameters:g'] = 9.80665
 
-    dm.run_problem(p, run_driver=run_driver)
+    dm.run_problem(p)
 
     # Plot results
     if SHOW_PLOTS:

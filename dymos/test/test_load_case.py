@@ -80,184 +80,184 @@ class TestLoadCase(unittest.TestCase):
             if os.path.exists(filename):
                 os.remove(filename)
 
-    def test_load_case_unchanged_grid(self):
-        import openmdao.api as om
-        from openmdao.utils.assert_utils import assert_near_equal
-        import dymos as dm
+    # def test_load_case_unchanged_grid(self):
+    #     import openmdao.api as om
+    #     from openmdao.utils.assert_utils import assert_near_equal
+    #     import dymos as dm
 
-        p = setup_problem(dm.GaussLobatto(num_segments=10))
+    #     p = setup_problem(dm.GaussLobatto(num_segments=10))
 
-        # Solve for the optimal trajectory
-        p.run_driver()
+    #     # Solve for the optimal trajectory
+    #     p.run_driver()
 
-        # Load the solution
-        cr = om.CaseReader('brachistochrone_solution.db')
-        system_cases = cr.list_cases('root')
-        case = cr.get_case(system_cases[-1])
+    #     # Load the solution
+    #     cr = om.CaseReader('brachistochrone_solution.db')
+    #     system_cases = cr.list_cases('root')
+    #     case = cr.get_case(system_cases[-1])
 
-        # Initialize the system with values from the case.
-        # We unnecessarily call setup again just to make sure we obliterate the previous solution
-        p.setup()
+    #     # Initialize the system with values from the case.
+    #     # We unnecessarily call setup again just to make sure we obliterate the previous solution
+    #     p.setup()
 
-        # Load the values from the previous solution
-        dm.load_case(p, case)
+    #     # Load the values from the previous solution
+    #     dm.load_case(p, case)
 
-        # Run the model to ensure we find the same output values as those that we recorded
-        p.run_driver()
+    #     # Run the model to ensure we find the same output values as those that we recorded
+    #     p.run_driver()
 
-        outputs = dict([(o[0], o[1]) for o in case.list_outputs(units=True, shape=True,
-                                                                out_stream=None)])
+    #     outputs = dict([(o[0], o[1]) for o in case.list_outputs(units=True, shape=True,
+    #                                                             out_stream=None)])
 
-        assert_near_equal(p['phase0.controls:theta'],
-                          outputs['phase0.control_group.indep_controls.controls:theta']['value'])
+    #     assert_near_equal(p['phase0.controls:theta'],
+    #                       outputs['phase0.control_group.indep_controls.controls:theta']['value'])
 
-    def test_load_case_lgl_to_radau(self):
-        import openmdao.api as om
-        from openmdao.utils.assert_utils import assert_near_equal
-        import dymos as dm
+    # def test_load_case_lgl_to_radau(self):
+    #     import openmdao.api as om
+    #     from openmdao.utils.assert_utils import assert_near_equal
+    #     import dymos as dm
 
-        p = setup_problem(dm.GaussLobatto(num_segments=10))
+    #     p = setup_problem(dm.GaussLobatto(num_segments=10))
 
-        # Solve for the optimal trajectory
-        p.run_driver()
+    #     # Solve for the optimal trajectory
+    #     p.run_driver()
 
-        # Load the solution
-        cr = om.CaseReader('brachistochrone_solution.db')
-        system_cases = cr.list_cases('root')
-        case = cr.get_case(system_cases[-1])
+    #     # Load the solution
+    #     cr = om.CaseReader('brachistochrone_solution.db')
+    #     system_cases = cr.list_cases('root')
+    #     case = cr.get_case(system_cases[-1])
 
-        # create a problem with a different transcription with a different number of variables
-        q = setup_problem(dm.Radau(num_segments=20))
+    #     # create a problem with a different transcription with a different number of variables
+    #     q = setup_problem(dm.Radau(num_segments=20))
 
-        # Load the values from the previous solution
-        dm.load_case(q, case)
+    #     # Load the values from the previous solution
+    #     dm.load_case(q, case)
 
-        # Run the model to ensure we find the same output values as those that we recorded
-        q.run_driver()
+    #     # Run the model to ensure we find the same output values as those that we recorded
+    #     q.run_driver()
 
-        outputs = dict([(o[0], o[1]) for o in case.list_outputs(units=True, shape=True,
-                                                                out_stream=None)])
+    #     outputs = dict([(o[0], o[1]) for o in case.list_outputs(units=True, shape=True,
+    #                                                             out_stream=None)])
 
-        time_val = outputs['phase0.timeseries.time']['value']
-        theta_val = outputs['phase0.timeseries.controls:theta']['value']
+    #     time_val = outputs['phase0.timeseries.time']['value']
+    #     theta_val = outputs['phase0.timeseries.controls:theta']['value']
 
-        assert_near_equal(q['phase0.timeseries.controls:theta'],
-                          q.model.phase0.interpolate(xs=time_val, ys=theta_val, nodes='all'),
-                          tolerance=1.0E-3)
+    #     assert_near_equal(q['phase0.timeseries.controls:theta'],
+    #                       q.model.phase0.interpolate(xs=time_val, ys=theta_val, nodes='all'),
+    #                       tolerance=1.0E-3)
 
-    def test_load_case_radau_to_lgl(self):
-        import openmdao.api as om
-        from openmdao.utils.assert_utils import assert_near_equal
-        import dymos as dm
+    # def test_load_case_radau_to_lgl(self):
+    #     import openmdao.api as om
+    #     from openmdao.utils.assert_utils import assert_near_equal
+    #     import dymos as dm
 
-        p = setup_problem(dm.Radau(num_segments=20))
+    #     p = setup_problem(dm.Radau(num_segments=20))
 
-        # Solve for the optimal trajectory
-        p.run_driver()
+    #     # Solve for the optimal trajectory
+    #     p.run_driver()
 
-        # Load the solution
-        cr = om.CaseReader('brachistochrone_solution.db')
-        system_cases = cr.list_cases('root')
-        case = cr.get_case(system_cases[-1])
+    #     # Load the solution
+    #     cr = om.CaseReader('brachistochrone_solution.db')
+    #     system_cases = cr.list_cases('root')
+    #     case = cr.get_case(system_cases[-1])
 
-        # create a problem with a different transcription with a different number of variables
-        q = setup_problem(dm.GaussLobatto(num_segments=50))
+    #     # create a problem with a different transcription with a different number of variables
+    #     q = setup_problem(dm.GaussLobatto(num_segments=50))
 
-        # Load the values from the previous solution
-        dm.load_case(q, case)
+    #     # Load the values from the previous solution
+    #     dm.load_case(q, case)
 
-        # Run the model to ensure we find the same output values as those that we recorded
-        q.run_driver()
+    #     # Run the model to ensure we find the same output values as those that we recorded
+    #     q.run_driver()
 
-        outputs = dict([(o[0], o[1]) for o in case.list_outputs(units=True, shape=True,
-                                                                out_stream=None)])
+    #     outputs = dict([(o[0], o[1]) for o in case.list_outputs(units=True, shape=True,
+    #                                                             out_stream=None)])
 
-        time_val = outputs['phase0.timeseries.time']['value']
-        theta_val = outputs['phase0.timeseries.controls:theta']['value']
+    #     time_val = outputs['phase0.timeseries.time']['value']
+    #     theta_val = outputs['phase0.timeseries.controls:theta']['value']
 
-        assert_near_equal(q['phase0.timeseries.controls:theta'],
-                          q.model.phase0.interpolate(xs=time_val, ys=theta_val, nodes='all'),
-                          tolerance=1.0E-2)
+    #     assert_near_equal(q['phase0.timeseries.controls:theta'],
+    #                       q.model.phase0.interpolate(xs=time_val, ys=theta_val, nodes='all'),
+    #                       tolerance=1.0E-2)
 
-    def test_load_case_rk4_to_lgl(self):
-        import openmdao.api as om
-        import dymos as dm
-        from openmdao.utils.assert_utils import assert_near_equal
+    # def test_load_case_rk4_to_lgl(self):
+    #     import openmdao.api as om
+    #     import dymos as dm
+    #     from openmdao.utils.assert_utils import assert_near_equal
 
-        p = setup_problem(dm.RungeKutta(num_segments=50))
+    #     p = setup_problem(dm.RungeKutta(num_segments=50))
 
-        # Solve for the optimal trajectory
-        p.run_driver()
+    #     # Solve for the optimal trajectory
+    #     p.run_driver()
 
-        # Load the solution
-        cr = om.CaseReader('brachistochrone_solution.db')
-        system_cases = cr.list_cases('root')
-        case = cr.get_case(system_cases[-1])
+    #     # Load the solution
+    #     cr = om.CaseReader('brachistochrone_solution.db')
+    #     system_cases = cr.list_cases('root')
+    #     case = cr.get_case(system_cases[-1])
 
-        # create a problem with a different transcription with a different number of variables
-        q = setup_problem(dm.GaussLobatto(num_segments=10))
+    #     # create a problem with a different transcription with a different number of variables
+    #     q = setup_problem(dm.GaussLobatto(num_segments=10))
 
-        # Load the values from the previous solution
-        dm.load_case(q, case)
+    #     # Load the values from the previous solution
+    #     dm.load_case(q, case)
 
-        # Run the model to ensure we find the same output values as those that we recorded
-        q.run_driver()
+    #     # Run the model to ensure we find the same output values as those that we recorded
+    #     q.run_driver()
 
-        outputs = dict([(o[0], o[1]) for o in case.list_outputs(units=True, shape=True,
-                                                                out_stream=None)])
+    #     outputs = dict([(o[0], o[1]) for o in case.list_outputs(units=True, shape=True,
+    #                                                             out_stream=None)])
 
-        time_val = outputs['phase0.timeseries.time']['value']
-        theta_val = outputs['phase0.timeseries.controls:theta']['value']
+    #     time_val = outputs['phase0.timeseries.time']['value']
+    #     theta_val = outputs['phase0.timeseries.controls:theta']['value']
 
-        assert_near_equal(q['phase0.timeseries.controls:theta'],
-                          q.model.phase0.interpolate(xs=time_val, ys=theta_val, nodes='all'),
-                          tolerance=1.0E-1)
+    #     assert_near_equal(q['phase0.timeseries.controls:theta'],
+    #                       q.model.phase0.interpolate(xs=time_val, ys=theta_val, nodes='all'),
+    #                       tolerance=1.0E-1)
 
-    def test_load_case_lgl_to_rk4(self):
-        import openmdao.api as om
-        import dymos as dm
-        from openmdao.utils.assert_utils import assert_near_equal
-        from scipy.interpolate import interp1d
-        import numpy as np
+    # def test_load_case_lgl_to_rk4(self):
+    #     import openmdao.api as om
+    #     import dymos as dm
+    #     from openmdao.utils.assert_utils import assert_near_equal
+    #     from scipy.interpolate import interp1d
+    #     import numpy as np
 
-        p = setup_problem(dm.GaussLobatto(num_segments=20))
+    #     p = setup_problem(dm.GaussLobatto(num_segments=20))
 
-        # Solve for the optimal trajectory
-        p.run_driver()
+    #     # Solve for the optimal trajectory
+    #     p.run_driver()
 
-        # Load the solution
-        cr = om.CaseReader('brachistochrone_solution.db')
-        system_cases = cr.list_cases('root')
-        case = cr.get_case(system_cases[-1])
+    #     # Load the solution
+    #     cr = om.CaseReader('brachistochrone_solution.db')
+    #     system_cases = cr.list_cases('root')
+    #     case = cr.get_case(system_cases[-1])
 
-        # create a problem with a different transcription with a different number of variables
-        q = setup_problem(dm.RungeKutta(num_segments=50))
+    #     # create a problem with a different transcription with a different number of variables
+    #     q = setup_problem(dm.RungeKutta(num_segments=50))
 
-        # Load the values from the previous solution
-        dm.load_case(q, case)
+    #     # Load the values from the previous solution
+    #     dm.load_case(q, case)
 
-        # Run the model to ensure we find the same output values as those that we recorded
-        q.run_driver()
+    #     # Run the model to ensure we find the same output values as those that we recorded
+    #     q.run_driver()
 
-        outputs = dict([(o[0], o[1]) for o in case.list_outputs(units=True, shape=True,
-                                                                out_stream=None)])
+    #     outputs = dict([(o[0], o[1]) for o in case.list_outputs(units=True, shape=True,
+    #                                                             out_stream=None)])
 
-        time_val = outputs['phase0.timeseries.time']['value'][:, 0]
-        theta_val = outputs['phase0.timeseries.controls:theta']['value'][:, 0]
-        nodup = np.insert(time_val[1:] != time_val[:-1], 0, True)  # remove duplicate times
-        time_val = time_val[nodup]
-        theta_val = theta_val[nodup]
+    #     time_val = outputs['phase0.timeseries.time']['value'][:, 0]
+    #     theta_val = outputs['phase0.timeseries.controls:theta']['value'][:, 0]
+    #     nodup = np.insert(time_val[1:] != time_val[:-1], 0, True)  # remove duplicate times
+    #     time_val = time_val[nodup]
+    #     theta_val = theta_val[nodup]
 
-        q_time = q['phase0.timeseries.time'][:, 0]
-        q_theta = q['phase0.timeseries.controls:theta'][:, 0]
-        nodup = np.insert(q_time[1:] != q_time[:-1], 0, True)  # remove duplicate times
-        q_time = q_time[nodup]
-        q_theta = q_theta[nodup]
-        fq_theta = interp1d(q_time, q_theta, kind='cubic', bounds_error=False, fill_value='extrapolate')
+    #     q_time = q['phase0.timeseries.time'][:, 0]
+    #     q_theta = q['phase0.timeseries.controls:theta'][:, 0]
+    #     nodup = np.insert(q_time[1:] != q_time[:-1], 0, True)  # remove duplicate times
+    #     q_time = q_time[nodup]
+    #     q_theta = q_theta[nodup]
+    #     fq_theta = interp1d(q_time, q_theta, kind='cubic', bounds_error=False, fill_value='extrapolate')
 
-        assert_near_equal(fq_theta(time_val),
-                          theta_val,
-                          tolerance=1.0E-2)
+    #     assert_near_equal(fq_theta(time_val),
+    #                       theta_val,
+    #                       tolerance=1.0E-2)
 
 
 if __name__ == '__main__':  # pragma: no cover

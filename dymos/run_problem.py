@@ -55,10 +55,7 @@ def modify_problem(problem, restart=None, reset_grid=False, solution_name='dymos
 
         check_simulation = cr.problem_metadata['driver']['name'] == 'Driver'
         if check_simulation:
-            prev_soln = {'inputs':  case.list_inputs(out_stream=None,  units=True, prom_name=True),
-                         'outputs': case.list_outputs(out_stream=None, units=True, prom_name=True)}
-
-            load_case(problem, prev_soln)
+            load_case(problem, restart)
         else:
             # Initialize the system with values from the case.
             # We unnecessarily call setup again just to make sure we obliterate the previous solution
@@ -66,11 +63,11 @@ def modify_problem(problem, restart=None, reset_grid=False, solution_name='dymos
             problem.setup()
 
             # Load the values from the previous solution
-            load_case(problem, case)
+            load_case(problem, restart)
 
 
 def run_problem(problem, refine_method='hp', refine_iteration_limit=10, run_driver=True,
-                simulate=False, case_name='dymos_simulation.db'):
+                simulate=True, recorder_file='dymos_simulation.db'):
     """
     A Dymos-specific interface to execute an OpenMDAO problem containing Dymos Trajectories or
     Phases.  This function can iteratively call run_driver to perform grid refinement, and
@@ -87,8 +84,6 @@ def run_problem(problem, refine_method='hp', refine_iteration_limit=10, run_driv
         The number of passes through the grid refinement algorithm to be made.
     run_driver : bool
         If True, run the driver (optimize the problem), otherwise just run the model one time.
-    no_iterate : bool
-        If True, run the driver but do not iterate.
     simulate : bool
         If True, perform a simulation of Trajectories found in the Problem after the driver
         has been run and grid refinement is complete.
@@ -102,9 +97,9 @@ def run_problem(problem, refine_method='hp', refine_iteration_limit=10, run_driv
 
     problem.record('final')  # save case for potential restart
 
-    _refine_iter(problem)
+    _refine_iter(problem, recorder_file=recorder_file)
 
-    if simulate:
-        for subsys in problem.model.system_iter(include_self=True, recurse=True):
-            if isinstance(subsys, Trajectory):
-                subsys.simulate(record_file='dymos_simulation.db')
+    # if simulate:
+    #     for subsys in problem.model.system_iter(include_self=True, recurse=True):
+    #         if isinstance(subsys, Trajectory):
+    #             subsys.simulate(record_file=recorder_file)

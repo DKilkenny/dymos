@@ -1,7 +1,10 @@
 import numpy as np
 import openmdao.api as om
 from openmdao.recorders.case import Case
+from openmdao.api import Problem, Group, CaseReader, SqliteRecorder
 from .phase.phase import Phase
+
+from dymos.trajectory.trajectory import Trajectory
 
 
 def _split_var_path(path):
@@ -78,7 +81,7 @@ def find_phases(sys):
     return phase_paths
 
 
-def load_case(problem, previous_solution):
+def load_case(problem, recorder_file):
     """
     Populate a guess for the given problem involving Dymos Phases by interpolating results
     from the previous solution.
@@ -93,12 +96,19 @@ def load_case(problem, previous_solution):
         Both list_inputs and list_outputs should be called with `units=True` and `prom_names=True`.
     """
 
-    # allow old style arguments using a Case or OpenMDAO problem instead of dictionary
-    assert(isinstance(previous_solution, Case) or isinstance(previous_solution, dict))
-    if isinstance(previous_solution, Case):
-        case = previous_solution
-        previous_solution = {'inputs': case.list_inputs(out_stream=None, units=True, prom_name=True),
-                             'outputs': case.list_outputs(out_stream=None, units=True, prom_name=True)}
+    rec = SqliteRecorder(recorder_file)
+    problem.model.recording_options['includes'] = ['*.timeseries.*']
+    problem.model.add_recorder(rec)
+
+    problem.setup()
+    problem.run_model()
+
+    cr = CaseReader(recorder_file)
+    system_cases = cr.list_cases('root')
+    case = cr.get_case(system_cases[-1])
+
+    previous_solution = {'inputs': case.list_inputs(out_stream=None, units=True, prom_name=True),
+                         'outputs': case.list_outputs(out_stream=None, units=True, prom_name=True)}
 
     phase_paths = find_phases(problem.model)
 
