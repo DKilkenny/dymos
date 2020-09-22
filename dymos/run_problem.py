@@ -99,7 +99,7 @@ def run_problem(problem, refine_method='hp', refine_iteration_limit=10, run_driv
 
     _refine_iter(problem, recorder_file=recorder_file)
 
-    # if simulate:
-    #     for subsys in problem.model.system_iter(include_self=True, recurse=True):
-    #         if isinstance(subsys, Trajectory):
-    #             subsys.simulate(record_file=recorder_file)
+    if simulate:
+        for subsys in problem.model.system_iter(include_self=True, recurse=True):
+            if isinstance(subsys, Trajectory):
+                subsys.simulate(record_file=recorder_file)

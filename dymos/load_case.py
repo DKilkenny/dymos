@@ -97,7 +97,6 @@ def load_case(problem, recorder_file):
     """
 
     rec = SqliteRecorder(recorder_file)
-    problem.model.recording_options['includes'] = ['*.timeseries.*']
     problem.model.add_recorder(rec)
 
     problem.setup()
